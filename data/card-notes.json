@@ -1,0 +1,23 @@
+{
+  "14558127": {
+    "tags": ["Hand Trap", "Négation", "Staple"],
+    "how_to_play": "À activer sur une recherche de deck, une invocation spéciale depuis le deck ou un envoi au cimetière.",
+    "synergies": ["23434538", "24224830"],
+    "combos": [
+      {
+        "title": "Protéger sa combo",
+        "steps": ["Déroule ta combo", "Garde Ash en main pour répondre à l'interruption adverse"],
+        "cards": ["23434538"]
+      }
+    ],
+    "source": "manual",
+    "updated": "2026-11-15"
+  },
+  "24224830": {
+    "tags": ["Interruption", "Anti-Hand Trap"],
+    "how_to_play": "Sort Jeu-Rapide : bannit un monstre du cimetière adverse et annule les effets des cartes du même nom ce tour.",
+    "synergies": ["14558127"],
+    "source": "manual",
+    "updated": "2026-11-15"
+  }
+}
