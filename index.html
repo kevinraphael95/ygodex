@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YGodex · Pokédex Yu-Gi-Oh!</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e8ecf1;--panel:#fff;--ink:#14213d;--muted:#5d6a82;--line:#cfd7e3;--red:#c8372d;--red-ink:#fff;--chip:#eef1f6;--gold:#b98a10}
+@media(prefers-color-scheme:dark){:root{--bg:#141b2b;--panel:#1d2740;--ink:#e8ecf5;--muted:#9aa7c2;--line:#2f3b5a;--red:#e0584d;--red-ink:#1a0a08;--chip:#26334f;--gold:#e0b341}}
+*{box-sizing:border-box;margin:0}
+body{font:16px/1.5 Barlow,system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+h1,h2,h3{font-family:'Barlow Condensed',sans-serif;line-height:1.1}
+.app{display:grid;grid-template-columns:300px 1fr;min-height:100vh}
+aside{background:var(--red);color:var(--red-ink);padding:22px 20px;position:sticky;top:0;height:100vh;overflow:auto}
+aside h1{font-size:2.6rem;letter-spacing:.5px}
+aside .sub{opacity:.85;font-size:.9rem;margin-bottom:18px}
+aside label{display:block;font-weight:600;font-size:.85rem;margin:16px 0 6px}
+aside input[type=search],aside select{width:100%;padding:10px 12px;border:0;border-radius:6px;font:inherit;background:var(--panel);color:var(--ink)}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags button{font:inherit;font-size:.82rem;padding:4px 10px;border-radius:99px;border:1.5px solid currentColor;background:none;color:inherit;cursor:pointer}
+.tags button[aria-pressed=true]{background:var(--red-ink);color:var(--red);border-color:var(--red-ink)}
+.check{display:flex;gap:8px;align-items:center;margin-top:16px;font-weight:500}
+main{padding:22px 26px 50px}
+.count{color:var(--muted);margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.tile:hover,.tile:focus-visible{border-color:var(--red);outline:none}
+.tile img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:4px;background:var(--chip)}
+.tile b{display:block;font-family:'Barlow Condensed';font-size:1.05rem;margin-top:6px;line-height:1.15}
+.tile small{color:var(--muted)}
+.tile .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-right:5px}
+.more{display:block;margin:24px auto 0;padding:10px 22px;border-radius:6px;border:1.5px solid var(--ink);background:none;color:var(--ink);font:600 1rem Barlow;cursor:pointer}
+.msg{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:22px;max-width:560px}
+dialog{border:0;border-radius:12px;padding:0;max-width:860px;width:calc(100% - 24px);max-height:92vh;background:var(--panel);color:var(--ink)}
+dialog::backdrop{background:rgba(10,15,30,.65)}
+.d{padding:24px;display:grid;grid-template-columns:220px 1fr;gap:22px;position:relative}
+.d img{width:100%;border-radius:6px}
+.d h2{font-size:2rem;margin-bottom:4px}
+.x{position:absolute;top:10px;right:12px;border:0;background:none;color:var(--muted);font-size:1.6rem;cursor:pointer}
+.meta{color:var(--muted);font-size:.92rem;margin-bottom:10px}
+.d h3{font-size:1.15rem;margin:18px 0 6px;color:var(--red)}
+.desc{white-space:pre-line;background:var(--chip);padding:12px;border-radius:6px;font-size:.93rem}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--chip);padding:3px 10px;border-radius:99px;font-size:.84rem;border:0;color:inherit;font-family:inherit}
+button.chip{cursor:pointer;border:1px solid var(--line)}
+.empty{color:var(--muted);font-style:italic}
+ol{padding-left:20px}
+@media(max-width:800px){.app{grid-template-columns:1fr}aside{position:static;height:auto}.d{grid-template-columns:1fr}.d img{max-width:220px}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <h1>YGodex</h1>
+  <p class="sub">Le Pokédex des cartes Yu-Gi-Oh!</p>
+  <label for="q">Nom de la carte</label>
+  <input id="q" type="search" placeholder="Ash Blossom, Téléportation…">
+  <label for="arch">Archétype</label>
+  <select id="arch"><option value="">Tous</option></select>
+  <label>Tags</label>
+  <div class="tags" id="tags"></div>
+  <label class="check"><input type="checkbox" id="noted"> Seulement les cartes avec fiche</label>
+</aside>
+<main>
+  <div class="count" id="count">Chargement…</div>
+  <div class="grid" id="grid"></div>
+  <button class="more" id="more" hidden>Afficher plus</button>
+</main>
+</div>
+<dialog id="dlg"></dialog>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const PAGE=60;
+let ALL=[],BY={},tagSel=new Set(),shown=PAGE,list=[];
+const name=c=>c.name.fr||c.name.en;
+
+async function init(){
+  try{
+    const r=await fetch('data/pokedex-db.json');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const db=await r.json();
+    BY=db.cards;ALL=Object.values(BY);
+  }catch(e){
+    $('count').remove();
+    $('grid').outerHTML=`<div class="msg"><h2>Données introuvables</h2><p>Le fichier <code>data/pokedex-db.json</code> n'existe pas encore. Lance l'Action « Build pokedex-db » dans l'onglet Actions du dépôt, puis recharge la page.</p></div>`;
+    return;
+  }
+  const arch={};ALL.forEach(c=>{if(c.archetype)arch[c.archetype]=(arch[c.archetype]||0)+1});
+  Object.keys(arch).sort((a,b)=>a.localeCompare(b)).forEach(a=>$('arch').add(new Option(`${a} (${arch[a]})`,a)));
+  const tags=[...new Set(ALL.flatMap(c=>c.tags))].sort();
+  $('tags').innerHTML=tags.length?tags.map(t=>`<button type="button" aria-pressed="false" data-t="${esc(t)}">${esc(t)}</button>`).join(''):'<span style="opacity:.8;font-size:.85rem">Aucun tag pour l\'instant</span>';
+  ['q','arch','noted'].forEach(i=>$(i).addEventListener('input',()=>{shown=PAGE;render()}));
+  $('tags').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    const t=b.dataset.t;tagSel.has(t)?tagSel.delete(t):tagSel.add(t);b.setAttribute('aria-pressed',tagSel.has(t));shown=PAGE;render()});
+  $('more').onclick=()=>{shown+=PAGE;draw()};
+  $('grid').addEventListener('click',e=>{const t=e.target.closest('.tile');if(t)openCard(t.dataset.id)});
+  render();
+}
+
+function render(){
+  const q=norm($('q').value.trim()),a=$('arch').value,n=$('noted').checked;
+  list=ALL.filter(c=>(!a||c.archetype===a)&&(!n||c.noted)&&[...tagSel].every(t=>c.tags.includes(t))
+    &&(!q||norm(c.name.en).includes(q)||norm(c.name.fr).includes(q)));
+  list.sort((x,y)=>(y.noted-x.noted)||name(x).localeCompare(name(y)));
+  draw();
+}
+function draw(){
+  $('count').textContent=`${list.length} carte${list.length>1?'s':''}`;
+  $('grid').innerHTML=list.slice(0,shown).map(c=>`<button class="tile" data-id="${c.id}">
+    <img src="${esc(c.img)}" alt="" loading="lazy"><b>${c.noted?'<span class="dot" title="Fiche disponible"></span>':''}${esc(name(c))}</b><small>${esc(c.type)}</small></button>`).join('')
+    ||'<div class="msg">Aucune carte ne correspond. Retire un filtre ou change le nom.</div>';
+  $('more').hidden=shown>=list.length;
+}
+const chips=(a,fn)=>a.length?`<div class="chips">${a.map(fn).join('')}</div>`:'';
+function ref(id){const c=BY[id];return c?`<button class="chip" data-open="${id}">${esc(name(c))}</button>`:''}
+
+function openCard(id){
+  const c=BY[id];if(!c)return;
+  const stats=[c.attribute,c.level&&'Niv. '+c.level,c.atk!=null&&'ATK '+c.atk,c.def!=null&&'DEF '+c.def,c.race].filter(Boolean).join(' · ');
+  $('dlg').innerHTML=`<div class="d"><button class="x" aria-label="Fermer" onclick="dlg.close()">✕</button>
+  <img src="${esc(c.imgFull||c.img)}" alt="${esc(name(c))}">
+  <div><h2>${esc(name(c))}</h2>
+  <div class="meta">${esc(c.type)}${stats?' — '+esc(stats):''}${c.archetype?' — Archétype : '+esc(c.archetype):''}</div>
+  <div class="desc">${esc(c.desc.fr||c.desc.en||'—')}</div>
+  <h3>Tags</h3>${chips(c.tags,t=>`<span class="chip">${esc(t)}</span>`)||'<span class="empty">Pas encore de tags.</span>'}
+  <h3>Comment la jouer</h3>${c.howToPlay?`<p>${esc(c.howToPlay)}</p>`:'<span class="empty">Pas encore de conseil pour cette carte.</span>'}
+  ${c.combos.length?'<h3>Combos</h3>'+c.combos.map(k=>`<p><b>${esc(k.title)}</b></p><ol>${k.steps.map(s=>`<li>${esc(s)}</li>`).join('')}</ol>`).join(''):''}
+  <h3>Synergies</h3>${chips(c.synergies,ref)||'<span class="empty">Aucune synergie renseignée.</span>'}
+  ${c.supports.length?'<h3>Supporte</h3>'+chips(c.supports.slice(0,12),s=>`<span class="chip">${esc(s)}</span>`):''}
+  </div></div>`;
+  if(!dlg.open)dlg.showModal();
+}
+const dlg=$('dlg');
+dlg.addEventListener('click',e=>{const o=e.target.closest('[data-open]');if(o)openCard(o.dataset.open);else if(e.target===dlg)dlg.close()});
+init();
+</script>
+</body>
+</html>
